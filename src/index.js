@@ -103,6 +103,7 @@ export default function fetch (url, opts = {}) {
       }, request.timeout)
     }
 
+    let urlChain
     if (request.useElectronNet) {
       // handle authenticating proxies
       req.on('login', (authInfo, callback) => {
@@ -112,6 +113,12 @@ export default function fetch (url, opts = {}) {
           req.abort()
           reject(new FetchError(`login event received from ${authInfo.host} but no credentials provided`, 'proxy', { code: 'PROXY_AUTH_FAILED' }))
         }
+      })
+
+      // save redirects
+      req.on('redirect', (statusCode, method, redirectURL, responseHeaders) => {
+        urlChain = urlChain || [request.url]
+        urlChain.push(responseHeaders.location[0])
       })
     }
 
@@ -204,7 +211,7 @@ export default function fetch (url, opts = {}) {
       }
 
       const responseOptions = {
-        url: request.url,
+        url: urlChain ? urlChain[urlChain.length - 1] : request.url,
         status: res.statusCode,
         statusText: res.statusMessage,
         headers: headers,
@@ -212,6 +219,10 @@ export default function fetch (url, opts = {}) {
         timeout: request.timeout,
         useElectronNet: request.useElectronNet,
         useSessionCookies: request.useSessionCookies
+      }
+
+      if (urlChain) {
+        responseOptions.urlChain = urlChain
       }
 
       // HTTP-network fetch step 16.1.2

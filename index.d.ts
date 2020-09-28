@@ -65,6 +65,7 @@ export class Response implements Body {
   readonly statusText: string
   readonly headers: Headers
   readonly body: Readable | string
+  readonly urlChain?: string[]
 
   clone (): Response
 
